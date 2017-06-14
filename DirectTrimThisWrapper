@@ -1,0 +1,39 @@
+#!/bin/bash
+DELAY=30
+while (true) ; do
+  echo "------------------------------------------------------------"
+  date
+  #tput sgr0
+  #tput setaf 4
+  EMPTY=true
+  IFS=$'\n' && for i in $(find ~irods/wosCache -type f) ; do
+    if fuser "$i" 2>/dev/null >/dev/null ; then
+      echo "`tput setaf 1`Open: `stat -c "%s" $i | numfmt --to=iec` $i`tput sgr0`";
+    else 
+      DID=`iquest "%s" "select DATA_ID where DATA_PATH = '$i'"`
+      if [[ $DID =~ ^CAT_NO_ROWS_FOUND.*$ ]] ; then
+        tput setab 1; tput setaf 0
+        echo "Not in ICAT $i"
+        tput sgr0
+      else
+        echo "`tput setaf 3`DATA_ID ${DID}, `stat -c "%s" $i | numfmt --to=iec` /rdZone/`echo $i | cut -c25-``tput sgr0`"
+        irule -F ./DirectTrimThis.r *DATA_ID=\"$DID\"
+        EMPTY=false
+      fi
+    fi
+  done
+  printf "`tput bold`Trim finished....`date '+%d/%m/%Y %H:%M:%S'`\n`tput sgr0`"
+  #echo "Pruning empty directories in cache..."
+  find ~irods/wosCache -type d -empty -exec rmdir {} +
+  #./lsWriting
+  if $EMPTY ; then
+    tput setaf 2
+    secs=$((5 * 60))
+    while [ $secs -gt 0 ]; do
+      echo -ne "No files in cache to be processed - sleeping $secs\033[0K\r"
+      sleep 1
+      : $((secs--))
+    done
+    tput sgr0
+  fi
+done
