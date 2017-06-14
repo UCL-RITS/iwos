@@ -1,0 +1,7 @@
+#!/bin/bash
+tmpfile=$(mktemp -dt icat.XXXXXX)
+cd $tmpfile
+icd `dirname $1`
+iget `basename $1`
+trap 'rm -f -r "$tmpfile"' INT TERM HUP EXIT
+zcat ${tmpfile}/`basename $1`

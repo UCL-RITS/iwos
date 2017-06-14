@@ -1,0 +1,13 @@
+#!/bin/bash
+tmpfile=$(mktemp -dt icat.XXXXXX)
+cd $tmpfile
+DN=`dirname $1`
+FN=`basename $1`
+icd $DN
+iget $FN 2> /dev/null || true
+trap 'rm -f -r "$tmpfile"' INT TERM HUP EXIT
+MD5=`cat $FN 2> /dev/null | md5sum | cut -c-32`
+vi ${tmpfile}/$FN
+if [[ ${MD5} != `cat $FN 2> /dev/null | md5sum | cut -c-32` ]]; then
+    iput -f $FN
+fi

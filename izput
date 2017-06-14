@@ -1,0 +1,7 @@
+#!/bin/bash
+tmpfile=$(mktemp -dt icat.XXXXXX)
+trap 'rm -f -r "$tmpfile"' INT TERM HUP EXIT
+FN=`basename $1`
+DN=`dirname $1`
+gzip -k -c $1 > ${tmpfile}/${FN}.gz
+iput ${tmpfile}/${FN}.gz

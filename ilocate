@@ -1,0 +1,7 @@
+#!/bin/bash
+if [ -z $1 ] ; then
+  iFROM="`ipwd`"
+else
+  iFROM="$1"
+fi
+iquest --no-page "%s/%s" "select COLL_NAME, DATA_NAME where COLL_NAME like '${iFROM}%'"
