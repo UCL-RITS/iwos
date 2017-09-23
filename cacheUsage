@@ -1,0 +1,4 @@
+#!/bin/bash
+for i in $(ls ~/wosCache/live ) ; do 
+  echo "$i: `iquest "%s" "select sum(DATA_SIZE) where DATA_RESC_HIER = 'wos;wosCache' and COLL_NAME like '/rdZone/live/${i}%'" | numfmt --to=iec`"
+done

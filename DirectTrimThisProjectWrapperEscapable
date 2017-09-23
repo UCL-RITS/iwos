@@ -1,0 +1,54 @@
+#!/bin/bash
+if [ -z $1 ] ; then
+  echo "Usage: $0 <rdxxxx>"
+  exit 1
+fi
+IFS=$'\n' && for i in $(find ~irods/wosCache/live/$1 -type f -mmin +30) ; do
+  if fuser "$i" 2>/dev/null >/dev/null ; then
+    echo "`tput setaf 1`Open: `stat -c "%s" $i | numfmt --to=iec` $i`tput sgr0`";
+  else 
+    doubleQuoteEscaped=`echo $i | sed -e 's/\x22/\\\x22/'`
+    #doubleQuoteEscaped=`echo $i | sed -e 's/\x22/\\\x22/' | sed -e 's/\x27/\\\x27/'`
+    # x22 is "
+    # x27 is '
+    # For some reason we can leave the single quote unescaped, even though iquest command takes the variable ' delimeted...
+    #echo "doubleQuoteEscaped=$doubleQuoteEscaped"
+    DID=`iquest "%s" "select DATA_ID where DATA_PATH = '$doubleQuoteEscaped'"`
+    #Check we're getting a number back...
+    if [ "$DID" -eq "$DID" ] 2>/dev/null; then
+      WOID=`iquest "%s" "select DATA_PATH where DATA_ID = '$DID' and DATA_RESC_HIER = 'wos;wosArchive'"`
+      if [[ $WOID =~ ^CAT_NO_ROWS_FOUND.*$ ]] ; then
+        tput setab 1; tput setaf 0
+        echo "DATA_ID $DID, not in WOS: $i"
+        irule -F ./DirectTrimThis.r *DATA_ID=\"$DID\"
+        #irule -F ./SyncThis.r *DATA_ID=\"$DID\"
+        tput sgr0
+      else
+        #Found WOS version of file
+        WSIZE=`curl -sI 10.10.200.74/objects/$WOID | grep Content-Length | cut -c17- | tr -d '[:space:]'`
+        ISIZE=`iquest "%s" "select DATA_SIZE where DATA_ID = '$DID' and DATA_RESC_HIER = 'wos;wosArchive'"`
+        if [ $(($WSIZE)) -eq $(($ISIZE)) ] ; then 
+          echo "`tput setaf 3`DATA_ID ${DID}, `stat -c "%s" $i | numfmt --to=iec` /rdZone/`echo $i | cut -c25-``tput sgr0`"
+          IRULE_OUTPUT=$(irule -F ./DirectTrimThis.r *DATA_ID=\"$DID\")
+          #if [[ "$HOST" =~ ^user.* ]]; then
+          if [[ "$IRULE_OUTPUT" =~ ^Failed.* ]] ; then
+            echo "That didn't work.... $IRULE_OUTPUT"
+            #Let's try to trim here...
+          else
+            EMPTY=false
+          fi
+        else 
+          tput setab 6; tput setaf 0
+          echo "DATA_ID $DID, size mismatch iRODS($ISIZE) and WOS($WSIZE) for /rdZone/`echo $i | cut -c25-``tput sgr0`"
+          tput sgr0
+        fi
+      fi
+    else
+      tput setab 1; tput setaf 0
+      echo "Not in ICAT $i"
+      tput sgr0
+    fi
+  fi
+done
+find ~irods/wosCache/live/$1 -type d -empty -exec rmdir {} +
+printf "`tput bold`Trim finished....`date '+%d/%m/%Y %H:%M:%S'`\n`tput sgr0`"

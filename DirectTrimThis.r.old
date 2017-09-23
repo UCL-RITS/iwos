@@ -1,5 +1,5 @@
 directTrimThis{
-    foreach ( *CacheFile in SELECT DATA_ID, DATA_REPL_NUM, DATA_PATH, DATA_CHECKSUM, COLL_NAME, DATA_NAME where DATA_RESC_HIER = 'wos;wosCache' and DATA_ID = '*DATA_ID' ){
+    foreach ( *CacheFile in SELECT DATA_ID, DATA_REPL_NUM, DATA_PATH, DATA_CHECKSUM, COLL_NAME, DATA_NAME where DATA_RESC_HIER = 'wos;wosCache' and DATA_ID = (*DATA_ID) ){
         *File.DATA_ID = *CacheFile.DATA_ID;
         *File.CACHE_REPL = *CacheFile.DATA_REPL_NUM;
         *File.CACHE_PATH = *CacheFile.DATA_PATH;
